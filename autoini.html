@@ -1,0 +1,106 @@
+<!-- 
+    **************************************************
+    ******      Author: TerenceSyu              ******
+    ******      Email:  teinterence@gmail.com   ******
+    ******      Handle: TerenceSyu              ******
+    ******      For internal use only           ******
+    **************************************************
+ -->
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SC中文化工具</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.1/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-F3w7mX95PdgyTmZZMECAngseQB83DfGTowi0iMjiWaeVhAn4FJkqJByhZMI3AhiU" crossorigin="anonymous">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.1/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-/bQdsTh/da6pkI1MST/rWKFNjaCP5gBSY4sEBT38Q/9RBh9AH40zEOg7Hlq2THRZ"
+        crossorigin="anonymous"></script>
+</head>
+
+<body class="container bg-dark">
+    <div class="d-flex justify-content-center mt-3">
+        <div class="card w-50 bg-light">
+            <div class="card-title">
+                <h3 class="border-bottom text-center text-primary">星際公民中文化安裝工具</h3>
+            </div>
+            <div class="card-body">
+                <h5>1. 請選擇 星際公民 的安裝位置</h5>
+                <h6 class="text-secondary">*例如 C:\Program Files\Roberts Space Industries\StarCitizen\LIVE</h6>
+                <button id="select-directory" class="btn btn-secondary">選擇安裝位置</button>
+                <br>
+                <h5>2. 請選擇 翻譯文檔</h5>
+                <h6 class="text-secondary">*請選擇 global.ini</h6>
+                <button id="select-file" class="btn btn-secondary" disabled>選擇翻譯文檔</button>
+                <br>
+                <h5>3. 點擊開始安裝</h5>
+                <button id="start-operation" class="btn btn-primary" disabled>開始安裝</button>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>
+
+<script>
+    document.getElementById('select-directory').addEventListener('click', async () => {
+        try {
+            const directoryHandle = await window.showDirectoryPicker();
+            window.directoryHandle = directoryHandle;
+            // Check if StarCitizen_Launcher.exe exists in the selected directory
+            await directoryHandle.getFileHandle('StarCitizen_Launcher.exe');
+            document.getElementById('select-file').disabled = false;
+            alert('安裝位置已選擇');
+        } catch (err) {
+            console.error(err);
+            alert('安裝位置選擇失敗 或 不是遊戲安裝位置，請重新選擇');
+        }
+    });
+
+    document.getElementById('select-file').addEventListener('click', async () => {
+        try {
+            const [fileHandle] = await window.showOpenFilePicker();
+            window.fileHandle = fileHandle;
+            document.getElementById('start-operation').disabled = false;
+            alert('翻譯文檔已選擇');
+        } catch (err) {
+            console.error(err);
+            alert('翻譯文檔選擇失敗');
+        }
+    });
+
+    document.getElementById('start-operation').addEventListener('click', async () => {
+        try {
+            const targetDir = await window.directoryHandle.getDirectoryHandle('data', { create: true })
+                .then(dir => dir.getDirectoryHandle('Localization', { create: true }))
+                .then(dir => dir.getDirectoryHandle('chinese_(traditional)', { create: true }));
+
+            const fileHandle = window.fileHandle;
+            const file = await fileHandle.getFile();
+            const targetFile = await targetDir.getFileHandle('global.ini', { create: true });
+            const writable = await targetFile.createWritable();
+            await writable.write(await file.arrayBuffer());
+            await writable.close();
+
+            const userCfgHandle = await window.directoryHandle.getFileHandle('user.cfg', { create: true });
+            const userCfgWritable = await userCfgHandle.createWritable({ keepExistingData: true });
+            const userCfgFile = await userCfgHandle.getFile();
+            const userCfgContent = await userCfgFile.text();
+
+            if (!userCfgContent.includes('g_language = chinese_(traditional)')) {
+                await userCfgWritable.write(userCfgContent + '\ng_language = chinese_(traditional)\n');
+            }
+            await userCfgWritable.close();
+
+            alert('安裝完成');
+        } catch (err) {
+            console.error(err);
+            alert('安裝失敗');
+        }
+        location.reload();
+    });
+
+</script>
