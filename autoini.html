@@ -78,6 +78,14 @@
                 .then(dir => dir.getDirectoryHandle('Localization', { create: true }))
                 .then(dir => dir.getDirectoryHandle('chinese_(traditional)', { create: true }));
 
+            // Check if global.ini exists in the target directory and delete it if it does
+            try {
+                const existingFile = await targetDir.getFileHandle('global.ini');
+                await existingFile.remove();
+            } catch (err) {
+                // If the file doesn't exist, proceed without any error
+            }
+
             const fileHandle = window.fileHandle;
             const file = await fileHandle.getFile();
             const targetFile = await targetDir.getFileHandle('global.ini', { create: true });
