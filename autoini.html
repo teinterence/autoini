@@ -14,6 +14,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SC中文化工具</title>
+    <!-- 引用Bootstrap 5.1.1 -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.1/dist/css/bootstrap.min.css" rel="stylesheet"
         integrity="sha384-F3w7mX95PdgyTmZZMECAngseQB83DfGTowi0iMjiWaeVhAn4FJkqJByhZMI3AhiU" crossorigin="anonymous">
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.1/dist/js/bootstrap.bundle.min.js"
@@ -46,6 +47,26 @@
 </html>
 
 <script>
+    async function convertToUTF8WithBOM(file) {
+        // UTF-8 BOM bytes
+        const bom = new Uint8Array([0xEF, 0xBB, 0xBF]);
+        let arrayBuffer = await file.arrayBuffer();
+        const uint8Array = new Uint8Array(arrayBuffer);
+
+        if (uint8Array[0] === bom[0] && uint8Array[1] === bom[1] && uint8Array[2] === bom[2]) {
+            // The file already has a BOM, keep it as is
+            console.log("The file already has a BOM, keep it as is");
+        } else {
+            // Add BOM to the beginning of the file
+            console.log("Add BOM to the beginning of the file");
+            const newArray = new Uint8Array(bom.length + uint8Array.length);
+            newArray.set(bom);
+            newArray.set(uint8Array, bom.length);
+            arrayBuffer = newArray.buffer;
+        }
+        return arrayBuffer
+    }
+
     document.getElementById('select-directory').addEventListener('click', async () => {
         try {
             const directoryHandle = await window.showDirectoryPicker();
@@ -88,9 +109,10 @@
 
             const fileHandle = window.fileHandle;
             const file = await fileHandle.getFile();
+            const utf8WithBOMContent = await convertToUTF8WithBOM(file);
             const targetFile = await targetDir.getFileHandle('global.ini', { create: true });
             const writable = await targetFile.createWritable();
-            await writable.write(await file.arrayBuffer());
+            await writable.write(await utf8WithBOMContent);
             await writable.close();
 
             const userCfgHandle = await window.directoryHandle.getFileHandle('user.cfg', { create: true });
